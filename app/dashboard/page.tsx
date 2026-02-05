@@ -105,6 +105,34 @@ export default function DashboardPage() {
     }
   };
 
+  // Helper function to format date
+  const formatDate = (dateValue: any): string => {
+    if (!dateValue) return '';
+    
+    // If it's already a string in a good format
+    if (typeof dateValue === 'string') {
+      // Check if it's ISO format (2026-01-01)
+      if (dateValue.includes('-')) {
+        const [year, month, day] = dateValue.split('-');
+        return `${day}/${month}/${year}`;
+      }
+      return dateValue;
+    }
+    
+    // If it's a Date object or Excel serial date
+    if (dateValue instanceof Date) {
+      return dateValue.toLocaleDateString('pt-BR');
+    }
+    
+    // If it's a number (Excel serial date)
+    if (typeof dateValue === 'number') {
+      const date = new Date((dateValue - 25569) * 86400 * 1000);
+      return date.toLocaleDateString('pt-BR');
+    }
+    
+    return String(dateValue);
+  };
+
   // Parse XLSX file
   const parseXLSX = (file: File): Promise<CompanyData> => {
     return new Promise((resolve, reject) => {
@@ -117,10 +145,10 @@ export default function DashboardPage() {
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-          // Initialize metrics
-          let purchases = { results: 0, costPerResult: 0 };
-          let leads = { results: 0, costPerResult: 0 };
-          let profileVisits = { results: 0, costPerResult: 0 };
+          // Initialize metrics with tracking for weighted average
+          let purchases = { results: 0, totalCost: 0 };
+          let leads = { results: 0, totalCost: 0 };
+          let profileVisits = { results: 0, totalCost: 0 };
           let totalInvestment = 0;
           let followers = 0;
           let impressions = 0;
@@ -129,47 +157,80 @@ export default function DashboardPage() {
 
           // Process each row
           jsonData.forEach((row: any) => {
-            const resultType = row['Tipo de resultado']?.toLowerCase() || '';
+            const resultType = (row['Tipo de resultado'] || '').toString().toLowerCase();
             const results = Number(row['Resultados']) || 0;
-            const costPerResult = Number(row['Custo por resultado']) || 0;
             const investment = Number(row['Valor usado (BRL)']) || 0;
 
             totalInvestment += investment;
 
-            if (row['Seguidores no Instagram']) {
-              followers = Number(row['Seguidores no Instagram']) || 0;
+            // Sum followers from all rows
+            if (row['Seguidores no Instagram'] !== undefined) {
+              followers += Number(row['Seguidores no Instagram']) || 0;
             }
 
-            if (row['Impressões']) {
+            // Sum impressions from all rows
+            if (row['Impressões'] !== undefined) {
               impressions += Number(row['Impressões']) || 0;
             }
 
-            if (row['Início dos relatórios']) {
-              periodStart = row['Início dos relatórios'];
+            // Get period dates (use first occurrence)
+            if (!periodStart && row['Início dos relatórios']) {
+              periodStart = formatDate(row['Início dos relatórios']);
             }
 
-            if (row['Término dos relatórios']) {
-              periodEnd = row['Término dos relatórios'];
+            if (!periodEnd && row['Término dos relatórios']) {
+              periodEnd = formatDate(row['Término dos relatórios']);
             }
 
+            // Categorize by result type and accumulate for weighted average
             if (resultType.includes('compras no site') || resultType.includes('compras')) {
               purchases.results += results;
-              purchases.costPerResult = costPerResult;
+              purchases.totalCost += investment;
             } else if (resultType.includes('leads no site') || resultType.includes('leads')) {
               leads.results += results;
-              leads.costPerResult = costPerResult;
+              leads.totalCost += investment;
             } else if (resultType.includes('visitas ao perfil') || resultType.includes('visitas')) {
               profileVisits.results += results;
-              profileVisits.costPerResult = costPerResult;
+              profileVisits.totalCost += investment;
             }
           });
 
+          // Calculate cost per result (total cost / total results)
+          const purchasesMetric = {
+            results: purchases.results,
+            costPerResult: purchases.results > 0 ? purchases.totalCost / purchases.results : 0
+          };
+          
+          const leadsMetric = {
+            results: leads.results,
+            costPerResult: leads.results > 0 ? leads.totalCost / leads.results : 0
+          };
+          
+          const profileVisitsMetric = {
+            results: profileVisits.results,
+            costPerResult: profileVisits.results > 0 ? profileVisits.totalCost / profileVisits.results : 0
+          };
+
           const companyName = companies.find(c => c.id === activeCompany)?.name || 'Empresa';
+
+          console.log('Parsed data:', {
+            purchases: purchasesMetric,
+            leads: leadsMetric,
+            profileVisits: profileVisitsMetric,
+            investment: totalInvestment,
+            followers,
+            impressions,
+            period: { start: periodStart, end: periodEnd }
+          });
 
           resolve({
             name: companyName,
             period: { start: periodStart, end: periodEnd },
-            metrics: { purchases, leads, profileVisits },
+            metrics: { 
+              purchases: purchasesMetric, 
+              leads: leadsMetric, 
+              profileVisits: profileVisitsMetric 
+            },
             investment: totalInvestment,
             followers,
             impressions,
