@@ -45,6 +45,7 @@ interface CustomMetricCardProps {
   formatAsNumber?: boolean;
   prefix?: string;
   showGrowthIcon?: boolean;
+  subtitle?: string;
 }
 
 function CustomMetricCard({
@@ -60,6 +61,7 @@ function CustomMetricCard({
   formatAsNumber = false,
   prefix = '',
   showGrowthIcon = false,
+  subtitle,
 }: CustomMetricCardProps) {
   const colorClasses = {
     primary: 'bg-franca-primary',
@@ -67,13 +69,29 @@ function CustomMetricCard({
     accent: 'bg-franca-accent',
   };
 
+  // Mensagem padrão baseada no tipo de métrica
+  const getDefaultSubtitle = () => {
+    if (subtitle) return subtitle;
+    if (title.toLowerCase().includes('seguidores')) return 'Novos seguidores conquistados no período';
+    if (title.toLowerCase().includes('visualizações')) return 'Total de visualizações alcançadas';
+    if (title.toLowerCase().includes('visitas')) return 'Visitas ao perfil do Instagram';
+    if (title.toLowerCase().includes('compras')) return 'Conversões realizadas no site';
+    if (title.toLowerCase().includes('leads')) return 'Leads captados no período';
+    if (title.toLowerCase().includes('conversas')) return 'Conversas iniciadas via mensagem';
+    return 'Resultado do período';
+  };
+
   return (
     <div className="bg-white border border-franca-light-blue rounded-2xl p-7 relative overflow-hidden card-hover">
       <div className={`absolute top-0 left-0 right-0 h-1 ${colorClasses[color]}`} />
 
-      <p className="text-xs font-semibold text-franca-accent uppercase tracking-wider mb-4">
+      <p className="text-xs font-semibold text-franca-accent uppercase tracking-wider mb-1">
         {title}
         {showGrowthIcon && value > 0 && <GrowthIcon />}
+      </p>
+      
+      <p className="text-[10px] text-franca-accent/70 mb-4">
+        {getDefaultSubtitle()}
       </p>
 
       <p className="text-5xl font-bold text-franca-secondary mb-2 leading-none">
@@ -108,24 +126,28 @@ function CustomMetricCard({
   );
 }
 
-// Componente de Card Secundário Grande
-interface BigSecondaryCardProps {
-  title: string;
+// Card de Visualizações (Principal em todos)
+interface ViewsCardProps {
   value: number;
-  prefix?: string;
-  variant: 'light' | 'dark';
   showGrowthIcon?: boolean;
 }
 
-function BigSecondaryCard({ title, value, prefix = '', variant, showGrowthIcon = false }: BigSecondaryCardProps) {
+function ViewsCard({ value, showGrowthIcon = false }: ViewsCardProps) {
   return (
-    <div className={`rounded-2xl p-7 card-hover ${variant === 'dark' ? 'bg-franca-secondary' : 'bg-franca-light-green'}`}>
-      <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${variant === 'dark' ? 'text-franca-light-blue' : 'text-franca-accent'}`}>
-        {title}
-        {showGrowthIcon && value > 0 && <GrowthIcon />}
+    <div className="bg-franca-secondary rounded-2xl p-7 card-hover">
+      <p className="text-xs font-semibold text-franca-light-blue uppercase tracking-wider mb-1">
+        Visualizações
+        {showGrowthIcon && value > 0 && (
+          <svg className="w-4 h-4 text-franca-primary inline ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+        )}
       </p>
-      <p className={`text-4xl font-bold ${variant === 'dark' ? 'text-white' : 'text-franca-secondary'}`}>
-        {prefix}{formatNumber(value)}
+      <p className="text-[10px] text-franca-light-blue/70 mb-4">
+        Alcance total das suas campanhas
+      </p>
+      <p className="text-4xl font-bold text-white">
+        {formatNumber(value)}
       </p>
     </div>
   );
@@ -265,7 +287,7 @@ export default function DashboardPage() {
               periodEnd = formatDate(row['Término dos relatórios']);
             }
 
-            // HOUSTON ACADEMY - padrão
+            // HOUSTON ACADEMY
             if (activeCompany === 'houston') {
               if (resultType.includes('compras no site') || resultType.includes('compras')) {
                 purchases.results += results;
@@ -273,33 +295,40 @@ export default function DashboardPage() {
               } else if (resultType.includes('leads no site') || resultType.includes('leads')) {
                 leads.results += results;
                 leads.totalCost += investment;
-              } else if (resultType.includes('visitas ao perfil') || resultType.includes('visitas')) {
+              } else if (resultType.includes('visitas ao perfil')) {
                 profileVisits.results += results;
                 profileVisits.totalCost += investment;
               }
             }
             
-            // MIGUEL - só visitas ao perfil
+            // MIGUEL - ThruPlay e Visitas ao Perfil
             else if (activeCompany === 'miguel') {
-              if (resultType.includes('visitas ao perfil') || resultType.includes('visitas')) {
+              if (resultType.includes('visitas ao perfil')) {
                 profileVisits.results += results;
                 profileVisits.totalCost += investment;
               }
+              // ThruPlay não precisa mapear, impressões já vem pelo campo Impressões
             }
             
-            // TREVO BARBEARIA e TABACARIA
-            else if (activeCompany === 'trevo-barbearia' || activeCompany === 'trevo-tabacaria') {
-              // "Conversas por mensagem iniciadas" vem como várias possibilidades
-              if (resultType.includes('conversas') || resultType.includes('mensagem') || resultType.includes('mensagens iniciadas')) {
+            // TREVO BARBEARIA - Conversas e Cliques no Link
+            else if (activeCompany === 'trevo-barbearia') {
+              if (resultType.includes('conversas por mensagem') || resultType.includes('conversas')) {
                 purchases.results += results;
                 purchases.totalCost += investment;
               }
-              // "Clique no link" = Visitas ao Perfil
-              else if (resultType.includes('clique no link') || resultType.includes('visitas ao perfil') || resultType.includes('visitas')) {
+              // "Cliques no link" = Visitas ao Perfil
+              else if (resultType.includes('cliques no link') || resultType.includes('clique no link')) {
                 profileVisits.results += results;
                 profileVisits.totalCost += investment;
               }
-              // Novos seguidores vai pelo campo separado, não pelo tipo de resultado
+            }
+            
+            // TREVO TABACARIA - Só Conversas
+            else if (activeCompany === 'trevo-tabacaria') {
+              if (resultType.includes('conversas por mensagem') || resultType.includes('conversas')) {
+                purchases.results += results;
+                purchases.totalCost += investment;
+              }
             }
           });
 
@@ -430,12 +459,28 @@ export default function DashboardPage() {
       pdf.text(formatCurrency(currentData.investment), margin + 10, yPosition + 28);
       yPosition += 45;
 
+      // CARD DE VISUALIZAÇÕES (sempre presente)
+      pdf.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2]);
+      pdf.roundedRect(margin, yPosition, contentWidth, 30, 4, 4, 'F');
+      pdf.setTextColor(200, 200, 200);
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('VISUALIZAÇÕES', margin + 10, yPosition + 11);
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Alcance total das suas campanhas', margin + 10, yPosition + 17);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(22);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(formatNumber(currentData.impressions), margin + 10, yPosition + 26);
+      yPosition += 40;
+
       // MÉTRICAS - CUSTOMIZADO POR CLIENTE
       const cardWidth = (contentWidth - 10) / 3;
-      const cardHeight = 50;
+      const cardHeight = 55;
 
       if (activeCompany === 'houston') {
-        // Houston: Compras, Leads, Visitas
+        // Houston: Compras, Leads, Visitas + Seguidores
         // Card 1
         pdf.setFillColor(lightGreen[0], lightGreen[1], lightGreen[2]);
         pdf.roundedRect(margin, yPosition, cardWidth, cardHeight, 3, 3, 'F');
@@ -445,13 +490,17 @@ export default function DashboardPage() {
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
         pdf.text('COMPRAS NO SITE', margin + 5, yPosition + 12);
+        pdf.setFontSize(5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Conversões realizadas no site', margin + 5, yPosition + 17);
         pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
         pdf.setFontSize(24);
-        pdf.text(String(currentData.metrics.purchases.results), margin + 5, yPosition + 28);
-        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(String(currentData.metrics.purchases.results), margin + 5, yPosition + 32);
+        pdf.setFontSize(7);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.text(`Custo: ${formatCurrency(currentData.metrics.purchases.costPerResult)}`, margin + 5, yPosition + 38);
+        pdf.text(`Custo: ${formatCurrency(currentData.metrics.purchases.costPerResult)}`, margin + 5, yPosition + 42);
 
         // Card 2
         const card2X = margin + cardWidth + 5;
@@ -463,13 +512,17 @@ export default function DashboardPage() {
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
         pdf.text('LEADS GERADOS', card2X + 5, yPosition + 12);
+        pdf.setFontSize(5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Leads captados no período', card2X + 5, yPosition + 17);
         pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
         pdf.setFontSize(24);
-        pdf.text(String(currentData.metrics.leads.results), card2X + 5, yPosition + 28);
-        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(String(currentData.metrics.leads.results), card2X + 5, yPosition + 32);
+        pdf.setFontSize(7);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.text(`Custo: ${formatCurrency(currentData.metrics.leads.costPerResult)}`, card2X + 5, yPosition + 38);
+        pdf.text(`Custo: ${formatCurrency(currentData.metrics.leads.costPerResult)}`, card2X + 5, yPosition + 42);
 
         // Card 3
         const card3X = margin + (cardWidth * 2) + 10;
@@ -481,60 +534,79 @@ export default function DashboardPage() {
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
         pdf.text('VISITAS AO PERFIL', card3X + 5, yPosition + 12);
+        pdf.setFontSize(5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Visitas ao perfil do Instagram', card3X + 5, yPosition + 17);
         pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
         pdf.setFontSize(24);
-        pdf.text(formatNumber(currentData.metrics.profileVisits.results), card3X + 5, yPosition + 28);
-        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(formatNumber(currentData.metrics.profileVisits.results), card3X + 5, yPosition + 32);
+        pdf.setFontSize(7);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.text(`Custo: ${formatCurrency(currentData.metrics.profileVisits.costPerResult)}`, card3X + 5, yPosition + 38);
+        pdf.text(`Custo: ${formatCurrency(currentData.metrics.profileVisits.costPerResult)}`, card3X + 5, yPosition + 42);
+
+        yPosition += cardHeight + 10;
+
+        // Card Seguidores
+        pdf.setFillColor(lightGreen[0], lightGreen[1], lightGreen[2]);
+        pdf.roundedRect(margin, yPosition, contentWidth, 30, 3, 3, 'F');
+        pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('NOVOS SEGUIDORES', margin + 10, yPosition + 11);
+        pdf.setFontSize(5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Novos seguidores conquistados no período', margin + 10, yPosition + 16);
+        pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
+        pdf.setFontSize(20);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`+${formatNumber(currentData.followers)}`, margin + 10, yPosition + 26);
+
+        yPosition += 40;
 
       } else if (activeCompany === 'miguel') {
-        // Miguel: Seguidores, Visualizações, Visitas
+        // Miguel: Seguidores, Visitas
         // Card 1 - Seguidores
         pdf.setFillColor(lightGreen[0], lightGreen[1], lightGreen[2]);
-        pdf.roundedRect(margin, yPosition, cardWidth, cardHeight, 3, 3, 'F');
+        pdf.roundedRect(margin, yPosition, (contentWidth - 5) / 2, cardHeight, 3, 3, 'F');
         pdf.setFillColor(primaryGreen[0], primaryGreen[1], primaryGreen[2]);
-        pdf.rect(margin, yPosition, cardWidth, 3, 'F');
+        pdf.rect(margin, yPosition, (contentWidth - 5) / 2, 3, 'F');
         pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
         pdf.text('NOVOS SEGUIDORES', margin + 5, yPosition + 12);
+        pdf.setFontSize(5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Novos seguidores conquistados', margin + 5, yPosition + 17);
         pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
         pdf.setFontSize(24);
-        pdf.text(`+${formatNumber(currentData.followers)}`, margin + 5, yPosition + 28);
-
-        // Card 2 - Visualizações
-        const card2X = margin + cardWidth + 5;
-        pdf.setFillColor(lightGreen[0], lightGreen[1], lightGreen[2]);
-        pdf.roundedRect(card2X, yPosition, cardWidth, cardHeight, 3, 3, 'F');
-        pdf.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-        pdf.rect(card2X, yPosition, cardWidth, 3, 'F');
-        pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('VISUALIZAÇÕES', card2X + 5, yPosition + 12);
-        pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-        pdf.setFontSize(24);
-        pdf.text(formatNumber(currentData.impressions), card2X + 5, yPosition + 28);
+        pdf.text(`+${formatNumber(currentData.followers)}`, margin + 5, yPosition + 35);
 
-        // Card 3 - Visitas ao Perfil
-        const card3X = margin + (cardWidth * 2) + 10;
+        // Card 2 - Visitas
+        const card2X = margin + (contentWidth - 5) / 2 + 5;
         pdf.setFillColor(lightGreen[0], lightGreen[1], lightGreen[2]);
-        pdf.roundedRect(card3X, yPosition, cardWidth, cardHeight, 3, 3, 'F');
+        pdf.roundedRect(card2X, yPosition, (contentWidth - 5) / 2, cardHeight, 3, 3, 'F');
         pdf.setFillColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.rect(card3X, yPosition, cardWidth, 3, 'F');
+        pdf.rect(card2X, yPosition, (contentWidth - 5) / 2, 3, 'F');
         pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('VISITAS AO PERFIL', card3X + 5, yPosition + 12);
+        pdf.text('VISITAS AO PERFIL', card2X + 5, yPosition + 12);
+        pdf.setFontSize(5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Visitas ao perfil do Instagram', card2X + 5, yPosition + 17);
         pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
         pdf.setFontSize(24);
-        pdf.text(formatNumber(currentData.metrics.profileVisits.results), card3X + 5, yPosition + 28);
-        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(formatNumber(currentData.metrics.profileVisits.results), card2X + 5, yPosition + 35);
+        pdf.setFontSize(7);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.text(`Custo: ${formatCurrency(currentData.metrics.profileVisits.costPerResult)}`, card3X + 5, yPosition + 38);
+        pdf.text(`Custo: ${formatCurrency(currentData.metrics.profileVisits.costPerResult)}`, card2X + 5, yPosition + 45);
+
+        yPosition += cardHeight + 10;
 
       } else {
         // Trevo Barbearia e Tabacaria: Conversas, Seguidores, Visitas
@@ -544,16 +616,20 @@ export default function DashboardPage() {
         pdf.setFillColor(primaryGreen[0], primaryGreen[1], primaryGreen[2]);
         pdf.rect(margin, yPosition, cardWidth, 3, 'F');
         pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.setFontSize(7);
+        pdf.setFontSize(6);
         pdf.setFont('helvetica', 'bold');
         pdf.text('CONVERSAS INICIADAS', margin + 5, yPosition + 12);
+        pdf.setFontSize(5);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Conversas via mensagem', margin + 5, yPosition + 17);
         pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
         pdf.setFontSize(24);
-        pdf.text(String(currentData.metrics.purchases.results), margin + 5, yPosition + 28);
-        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(String(currentData.metrics.purchases.results), margin + 5, yPosition + 32);
+        pdf.setFontSize(7);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.text(`Custo: ${formatCurrency(currentData.metrics.purchases.costPerResult)}`, margin + 5, yPosition + 38);
+        pdf.text(`Custo: ${formatCurrency(currentData.metrics.purchases.costPerResult)}`, margin + 5, yPosition + 42);
 
         // Card 2 - Seguidores
         const card2X = margin + cardWidth + 5;
@@ -565,60 +641,39 @@ export default function DashboardPage() {
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
         pdf.text('NOVOS SEGUIDORES', card2X + 5, yPosition + 12);
-        pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-        pdf.setFontSize(24);
-        pdf.text(`+${formatNumber(currentData.followers)}`, card2X + 5, yPosition + 28);
-
-        // Card 3 - Visitas
-        const card3X = margin + (cardWidth * 2) + 10;
-        pdf.setFillColor(lightGreen[0], lightGreen[1], lightGreen[2]);
-        pdf.roundedRect(card3X, yPosition, cardWidth, cardHeight, 3, 3, 'F');
-        pdf.setFillColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.rect(card3X, yPosition, cardWidth, 3, 'F');
-        pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('VISITAS AO PERFIL', card3X + 5, yPosition + 12);
-        pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-        pdf.setFontSize(24);
-        pdf.text(formatNumber(currentData.metrics.profileVisits.results), card3X + 5, yPosition + 28);
-        pdf.setFontSize(8);
+        pdf.setFontSize(5);
         pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.text(`Custo: ${formatCurrency(currentData.metrics.profileVisits.costPerResult)}`, card3X + 5, yPosition + 38);
-      }
-
-      yPosition += cardHeight + 10;
-
-      // Cards secundários só para Houston
-      if (activeCompany === 'houston') {
-        const halfWidth = (contentWidth - 5) / 2;
-        const secondaryCardHeight = 35;
-
-        pdf.setFillColor(lightGreen[0], lightGreen[1], lightGreen[2]);
-        pdf.roundedRect(margin, yPosition, halfWidth, secondaryCardHeight, 3, 3, 'F');
-        pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('NOVOS SEGUIDORES', margin + 8, yPosition + 12);
+        pdf.text('Novos seguidores conquistados', card2X + 5, yPosition + 17);
         pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-        pdf.setFontSize(22);
-        pdf.text(`+${formatNumber(currentData.followers)}`, margin + 8, yPosition + 27);
-
-        const impressionsX = margin + halfWidth + 5;
-        pdf.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-        pdf.roundedRect(impressionsX, yPosition, halfWidth, secondaryCardHeight, 3, 3, 'F');
-        pdf.setTextColor(200, 200, 200);
-        pdf.setFontSize(8);
+        pdf.setFontSize(24);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('IMPRESSÕES', impressionsX + 8, yPosition + 12);
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(22);
-        pdf.text(formatNumber(currentData.impressions), impressionsX + 8, yPosition + 27);
+        pdf.text(`+${formatNumber(currentData.followers)}`, card2X + 5, yPosition + 35);
 
-        yPosition += secondaryCardHeight + 15;
-      } else {
-        yPosition += 10;
+        // Card 3 - Visitas (só para Barbearia)
+        if (activeCompany === 'trevo-barbearia') {
+          const card3X = margin + (cardWidth * 2) + 10;
+          pdf.setFillColor(lightGreen[0], lightGreen[1], lightGreen[2]);
+          pdf.roundedRect(card3X, yPosition, cardWidth, cardHeight, 3, 3, 'F');
+          pdf.setFillColor(accentGreen[0], accentGreen[1], accentGreen[2]);
+          pdf.rect(card3X, yPosition, cardWidth, 3, 'F');
+          pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('VISITAS AO PERFIL', card3X + 5, yPosition + 12);
+          pdf.setFontSize(5);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text('Visitas ao perfil do Instagram', card3X + 5, yPosition + 17);
+          pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
+          pdf.setFontSize(24);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(formatNumber(currentData.metrics.profileVisits.results), card3X + 5, yPosition + 32);
+          pdf.setFontSize(7);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor(accentGreen[0], accentGreen[1], accentGreen[2]);
+          pdf.text(`Custo: ${formatCurrency(currentData.metrics.profileVisits.costPerResult)}`, card3X + 5, yPosition + 42);
+        }
+
+        yPosition += cardHeight + 10;
       }
 
       // INSIGHTS
@@ -736,15 +791,18 @@ export default function DashboardPage() {
 
   // RENDER CUSTOMIZADO POR CLIENTE
   const renderDashboardContent = () => {
-    // HOUSTON ACADEMY - Layout original
+    // HOUSTON ACADEMY
     if (activeCompany === 'houston') {
       return (
         <>
           {/* Card Investimento Grande */}
-          <div className="mb-8 animate-fade-in">
+          <div className="mb-6 animate-fade-in">
             <div className="bg-gradient-to-r from-franca-primary to-franca-primary-dark rounded-2xl p-8 md:p-10 shadow-lg">
-              <p className="text-franca-secondary text-sm font-semibold uppercase tracking-wider mb-2">
+              <p className="text-franca-secondary text-sm font-semibold uppercase tracking-wider mb-1">
                 Investimento Total
+              </p>
+              <p className="text-franca-secondary/70 text-xs mb-2">
+                Valor investido no período
               </p>
               <p className="text-franca-secondary text-4xl md:text-5xl font-bold">
                 {formatCurrency(currentData.investment)}
@@ -752,8 +810,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Card Visualizações */}
+          <div className="mb-6 animate-fade-in">
+            <ViewsCard value={currentData.impressions} showGrowthIcon={currentData.impressions > 0} />
+          </div>
+
           {/* Métricas principais */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 stagger-children">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 stagger-children">
             <CustomMetricCard
               title="Compras no Site"
               value={currentData.metrics.purchases.results}
@@ -780,34 +843,37 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Métricas secundárias */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 stagger-children">
-            <BigSecondaryCard
-              title="Novos Seguidores"
-              value={currentData.followers}
-              prefix="+"
-              variant="light"
-              showGrowthIcon={currentData.followers > 0}
-            />
-            <BigSecondaryCard
-              title="Impressões"
-              value={currentData.impressions}
-              variant="dark"
-            />
+          {/* Card Seguidores */}
+          <div className="mb-10 animate-fade-in">
+            <div className="bg-franca-light-green rounded-2xl p-7 card-hover">
+              <p className="text-xs font-semibold text-franca-accent uppercase tracking-wider mb-1">
+                Novos Seguidores
+                {currentData.followers > 0 && <GrowthIcon />}
+              </p>
+              <p className="text-[10px] text-franca-accent/70 mb-4">
+                Novos seguidores conquistados no período
+              </p>
+              <p className="text-4xl font-bold text-franca-secondary">
+                +{formatNumber(currentData.followers)}
+              </p>
+            </div>
           </div>
         </>
       );
     }
 
-    // MIGUEL - Seguidores e Visualizações como principais
+    // MIGUEL
     if (activeCompany === 'miguel') {
       return (
         <>
           {/* Card Investimento Grande */}
-          <div className="mb-8 animate-fade-in">
+          <div className="mb-6 animate-fade-in">
             <div className="bg-gradient-to-r from-franca-primary to-franca-primary-dark rounded-2xl p-8 md:p-10 shadow-lg">
-              <p className="text-franca-secondary text-sm font-semibold uppercase tracking-wider mb-2">
+              <p className="text-franca-secondary text-sm font-semibold uppercase tracking-wider mb-1">
                 Investimento Total
+              </p>
+              <p className="text-franca-secondary/70 text-xs mb-2">
+                Valor investido no período
               </p>
               <p className="text-franca-secondary text-4xl md:text-5xl font-bold">
                 {formatCurrency(currentData.investment)}
@@ -815,8 +881,13 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Métricas principais - Customizadas para Miguel */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 stagger-children">
+          {/* Card Visualizações */}
+          <div className="mb-6 animate-fade-in">
+            <ViewsCard value={currentData.impressions} showGrowthIcon={currentData.impressions > 0} />
+          </div>
+
+          {/* Métricas principais - Miguel */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 stagger-children">
             <CustomMetricCard
               title="Novos Seguidores"
               value={currentData.followers}
@@ -824,14 +895,6 @@ export default function DashboardPage() {
               showCost={false}
               prefix="+"
               showGrowthIcon={currentData.followers > 0}
-            />
-            <CustomMetricCard
-              title="Visualizações"
-              value={currentData.impressions}
-              color="secondary"
-              showCost={false}
-              formatAsNumber
-              showGrowthIcon={currentData.impressions > 0}
             />
             <CustomMetricCard
               title="Visitas ao Perfil"
@@ -848,8 +911,8 @@ export default function DashboardPage() {
       );
     }
 
-    // TREVO BARBEARIA e TABACARIA
-    if (activeCompany === 'trevo-barbearia' || activeCompany === 'trevo-tabacaria') {
+    // TREVO BARBEARIA
+    if (activeCompany === 'trevo-barbearia') {
       const visitCost = currentData.metrics.profileVisits.costPerResult;
       const isSuperExcellent = visitCost > 0 && visitCost < 0.20;
       const isExcellent = visitCost > 0 && visitCost < 0.50 && !isSuperExcellent;
@@ -857,10 +920,13 @@ export default function DashboardPage() {
       return (
         <>
           {/* Card Investimento Grande */}
-          <div className="mb-8 animate-fade-in">
+          <div className="mb-6 animate-fade-in">
             <div className="bg-gradient-to-r from-franca-primary to-franca-primary-dark rounded-2xl p-8 md:p-10 shadow-lg">
-              <p className="text-franca-secondary text-sm font-semibold uppercase tracking-wider mb-2">
+              <p className="text-franca-secondary text-sm font-semibold uppercase tracking-wider mb-1">
                 Investimento Total
+              </p>
+              <p className="text-franca-secondary/70 text-xs mb-2">
+                Valor investido no período
               </p>
               <p className="text-franca-secondary text-4xl md:text-5xl font-bold">
                 {formatCurrency(currentData.investment)}
@@ -868,7 +934,12 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Métricas principais - Customizadas para Trevo */}
+          {/* Card Visualizações */}
+          <div className="mb-6 animate-fade-in">
+            <ViewsCard value={currentData.impressions} showGrowthIcon={currentData.impressions > 0} />
+          </div>
+
+          {/* Métricas principais - Trevo Barbearia */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 stagger-children">
             <CustomMetricCard
               title="Conversas por Mensagem Iniciadas"
@@ -896,6 +967,52 @@ export default function DashboardPage() {
               excellentMessage="Resultado Excelente! O custo por visita está abaixo de R$0,50, indicando ótima eficiência no engajamento."
               superExcellentMessage="O custo por visita está ABAIXO de R$0,20! Performance excepcional, continuem assim!"
               showGrowthIcon={currentData.metrics.profileVisits.results > 0}
+            />
+          </div>
+        </>
+      );
+    }
+
+    // TREVO TABACARIA
+    if (activeCompany === 'trevo-tabacaria') {
+      return (
+        <>
+          {/* Card Investimento Grande */}
+          <div className="mb-6 animate-fade-in">
+            <div className="bg-gradient-to-r from-franca-primary to-franca-primary-dark rounded-2xl p-8 md:p-10 shadow-lg">
+              <p className="text-franca-secondary text-sm font-semibold uppercase tracking-wider mb-1">
+                Investimento Total
+              </p>
+              <p className="text-franca-secondary/70 text-xs mb-2">
+                Valor investido no período
+              </p>
+              <p className="text-franca-secondary text-4xl md:text-5xl font-bold">
+                {formatCurrency(currentData.investment)}
+              </p>
+            </div>
+          </div>
+
+          {/* Card Visualizações */}
+          <div className="mb-6 animate-fade-in">
+            <ViewsCard value={currentData.impressions} showGrowthIcon={currentData.impressions > 0} />
+          </div>
+
+          {/* Métricas principais - Trevo Tabacaria (só Conversas e Seguidores) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 stagger-children">
+            <CustomMetricCard
+              title="Conversas por Mensagem Iniciadas"
+              value={currentData.metrics.purchases.results}
+              costPerResult={currentData.metrics.purchases.costPerResult}
+              color="primary"
+              showGrowthIcon={currentData.metrics.purchases.results > 0}
+            />
+            <CustomMetricCard
+              title="Novos Seguidores"
+              value={currentData.followers}
+              color="secondary"
+              showCost={false}
+              prefix="+"
+              showGrowthIcon={currentData.followers > 0}
             />
           </div>
         </>
