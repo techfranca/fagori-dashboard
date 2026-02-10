@@ -24,6 +24,8 @@ const PAGE = {
   margin: 20,
   get contentWidth() { return this.width - (this.margin * 2); },
   footerHeight: 25,
+  headerHeight: 45,
+  safeBottom: 30, // Margem de segurança antes do footer
 };
 
 export const generatePDF = ({ currentData, activeCompany, insights }: ExportPDFParams): void => {
@@ -92,10 +94,8 @@ export const generatePDF = ({ currentData, activeCompany, insights }: ExportPDFP
   // FOOTER da página 1
   renderFooter(pdf);
 
-  // ==================== PÁGINA 2 - INSIGHTS ====================
+  // ==================== PÁGINA 2+ - INSIGHTS (DINÂMICO) ====================
   pdf.addPage();
-  
-  // HEADER da página 2
   renderHeader(pdf);
   yPosition = 60;
 
@@ -110,74 +110,109 @@ export const generatePDF = ({ currentData, activeCompany, insights }: ExportPDFP
   pdf.text(currentData.name, PAGE.margin, yPosition + 8);
   yPosition += 25;
 
-  // CARDS DE INSIGHTS (maiores, com mais espaço para texto)
-  const insightCardHeight = 70;
-  
-  // Card 1 - Pontos de Progresso
-  pdf.setFillColor(...COLORS.lightGreen);
-  pdf.roundedRect(PAGE.margin, yPosition, PAGE.contentWidth, insightCardHeight, 4, 4, 'F');
-  pdf.setFillColor(...COLORS.primaryGreen);
-  pdf.rect(PAGE.margin, yPosition, 4, insightCardHeight, 'F');
-  
-  pdf.setTextColor(...COLORS.accentGreen);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('PONTOS DE PROGRESSO', PAGE.margin + 10, yPosition + 12);
-  
-  pdf.setTextColor(...COLORS.darkBlue);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  const progressText = insights.progress || 'Nenhum ponto adicionado.';
-  const progressLines = pdf.splitTextToSize(progressText, PAGE.contentWidth - 20);
-  pdf.text(progressLines.slice(0, 6), PAGE.margin + 10, yPosition + 24);
-  
-  yPosition += insightCardHeight + 10;
+  // Renderizar cada insight de forma dinâmica
+  const insightsData = [
+    {
+      title: 'PONTOS DE PROGRESSO',
+      text: insights.progress || 'Nenhum ponto adicionado.',
+      bgColor: COLORS.lightGreen,
+      barColor: COLORS.primaryGreen,
+      titleColor: COLORS.accentGreen,
+    },
+    {
+      title: 'PONTOS POSITIVOS',
+      text: insights.positives || 'Nenhum ponto adicionado.',
+      bgColor: COLORS.gray,
+      barColor: COLORS.darkBlue,
+      titleColor: COLORS.darkBlue,
+    },
+    {
+      title: 'FOCOS DO PROXIMO MES',
+      text: insights.nextFocus || 'Nenhum foco adicionado.',
+      bgColor: COLORS.white,
+      barColor: COLORS.accentGreen,
+      titleColor: COLORS.accentGreen,
+      hasBorder: true,
+    },
+  ];
 
-  // Card 2 - Pontos Positivos
-  pdf.setFillColor(...COLORS.gray);
-  pdf.roundedRect(PAGE.margin, yPosition, PAGE.contentWidth, insightCardHeight, 4, 4, 'F');
-  pdf.setFillColor(...COLORS.darkBlue);
-  pdf.rect(PAGE.margin, yPosition, 4, insightCardHeight, 'F');
-  
-  pdf.setTextColor(...COLORS.darkBlue);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('PONTOS POSITIVOS', PAGE.margin + 10, yPosition + 12);
-  
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  const positivesText = insights.positives || 'Nenhum ponto adicionado.';
-  const positivesLines = pdf.splitTextToSize(positivesText, PAGE.contentWidth - 20);
-  pdf.text(positivesLines.slice(0, 6), PAGE.margin + 10, yPosition + 24);
-  
-  yPosition += insightCardHeight + 10;
+  for (const insight of insightsData) {
+    yPosition = renderInsightCard(pdf, insight, yPosition);
+  }
 
-  // Card 3 - Focos do Próximo Mês
-  pdf.setFillColor(...COLORS.white);
-  pdf.setDrawColor(...COLORS.gray);
-  pdf.roundedRect(PAGE.margin, yPosition, PAGE.contentWidth, insightCardHeight, 4, 4, 'FD');
-  pdf.setFillColor(...COLORS.accentGreen);
-  pdf.rect(PAGE.margin, yPosition, 4, insightCardHeight, 'F');
-  
-  pdf.setTextColor(...COLORS.accentGreen);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('FOCOS DO PROXIMO MES', PAGE.margin + 10, yPosition + 12);
-  
-  pdf.setTextColor(...COLORS.darkBlue);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  const focusText = insights.nextFocus || 'Nenhum foco adicionado.';
-  const focusLines = pdf.splitTextToSize(focusText, PAGE.contentWidth - 20);
-  pdf.text(focusLines.slice(0, 6), PAGE.margin + 10, yPosition + 24);
-
-  // FOOTER da página 2
+  // Footer da última página
   renderFooter(pdf);
 
   // SALVAR
   const fileName = `franca-relatorio-${currentData.name.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.pdf`;
   pdf.save(fileName);
 };
+
+// ==================== RENDER INSIGHT CARD DINÂMICO ====================
+
+interface InsightCardData {
+  title: string;
+  text: string;
+  bgColor: [number, number, number];
+  barColor: [number, number, number];
+  titleColor: [number, number, number];
+  hasBorder?: boolean;
+}
+
+function renderInsightCard(pdf: jsPDF, data: InsightCardData, startY: number): number {
+  const lineHeight = 5;
+  const titleHeight = 15;
+  const paddingTop = 12;
+  const paddingBottom = 10;
+  const textStartOffset = 24;
+  
+  // Quebrar texto em linhas
+  pdf.setFontSize(9);
+  const textLines = pdf.splitTextToSize(data.text, PAGE.contentWidth - 20);
+  
+  // Calcular altura necessária para o card
+  const textHeight = textLines.length * lineHeight;
+  const cardHeight = titleHeight + textHeight + paddingBottom;
+  
+  let currentY = startY;
+  
+  // Verificar se cabe na página atual
+  if (currentY + cardHeight > PAGE.height - PAGE.safeBottom) {
+    // Criar nova página
+    renderFooter(pdf);
+    pdf.addPage();
+    renderHeader(pdf);
+    currentY = 60;
+  }
+  
+  // Desenhar card
+  if (data.hasBorder) {
+    pdf.setFillColor(...data.bgColor);
+    pdf.setDrawColor(...COLORS.gray);
+    pdf.roundedRect(PAGE.margin, currentY, PAGE.contentWidth, cardHeight, 4, 4, 'FD');
+  } else {
+    pdf.setFillColor(...data.bgColor);
+    pdf.roundedRect(PAGE.margin, currentY, PAGE.contentWidth, cardHeight, 4, 4, 'F');
+  }
+  
+  // Barra lateral
+  pdf.setFillColor(...data.barColor);
+  pdf.rect(PAGE.margin, currentY, 4, cardHeight, 'F');
+  
+  // Título
+  pdf.setTextColor(...data.titleColor);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(data.title, PAGE.margin + 10, currentY + paddingTop);
+  
+  // Texto (todas as linhas)
+  pdf.setTextColor(...COLORS.darkBlue);
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(textLines, PAGE.margin + 10, currentY + textStartOffset);
+  
+  return currentY + cardHeight + 10;
+}
 
 // ==================== FUNÇÕES AUXILIARES ====================
 
