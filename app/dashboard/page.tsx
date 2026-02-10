@@ -131,11 +131,23 @@ export default function DashboardPage() {
   const exportPDF = async () => {
     setIsExporting(true);
     try {
-      const pdfInsights = insights[activeCompany] || { progress: '', positives: '', nextFocus: '' };
+      // Buscar insights DIRETAMENTE do Firestore para garantir dados atualizados
+      let pdfInsights: Insights = { progress: '', positives: '', nextFocus: '' };
+      
+      try {
+        const insightsDoc = await getDoc(doc(db, 'dashboard', 'insights'));
+        if (insightsDoc.exists()) {
+          const allInsights = insightsDoc.data() as { [key: string]: Insights };
+          pdfInsights = allInsights[activeCompany] || pdfInsights;
+        }
+      } catch (err) {
+        console.error('Erro ao buscar insights:', err);
+        // Fallback para o estado local
+        pdfInsights = insights[activeCompany] || pdfInsights;
+      }
       
       // Debug: verificar o que está sendo passado
       console.log('Exportando PDF com insights:', pdfInsights);
-      console.log('Estado completo de insights:', insights);
       console.log('Empresa ativa:', activeCompany);
       
       generatePDF({
