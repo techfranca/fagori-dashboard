@@ -7,6 +7,33 @@ interface ExportPDFParams {
   insights: Insights;
 }
 
+// Função para sanitizar texto - remove problemas de encoding
+const sanitizeText = (text: string): string => {
+  if (!text) return '';
+  // Substitui caracteres problemáticos por equivalentes ASCII ou remove
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^\x00-\x7F]/g, (char) => {
+      // Mapeamento manual de caracteres especiais comuns
+      const map: { [key: string]: string } = {
+        'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a', 'ä': 'a',
+        'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+        'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+        'ó': 'o', 'ò': 'o', 'õ': 'o', 'ô': 'o', 'ö': 'o',
+        'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+        'ç': 'c', 'ñ': 'n',
+        'Á': 'A', 'À': 'A', 'Ã': 'A', 'Â': 'A', 'Ä': 'A',
+        'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+        'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I',
+        'Ó': 'O', 'Ò': 'O', 'Õ': 'O', 'Ô': 'O', 'Ö': 'O',
+        'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U',
+        'Ç': 'C', 'Ñ': 'N',
+      };
+      return map[char] || char;
+    });
+};
+
 export const generatePDF = ({ currentData, activeCompany, insights }: ExportPDFParams): void => {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = 210;
@@ -367,7 +394,7 @@ function renderInsights(
   pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  const progressText = insights.progress || 'Nenhum ponto adicionado.';
+  const progressText = sanitizeText(insights.progress) || 'Nenhum ponto adicionado.';
   const progressLines = pdf.splitTextToSize(progressText, insightCardWidth - 10);
   pdf.text(progressLines.slice(0, 4), margin + 6, yPos + 16);
 
@@ -383,7 +410,7 @@ function renderInsights(
   pdf.text('PONTOS POSITIVOS', insight2X + 6, yPos + 8);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  const positivesText = insights.positives || 'Nenhum ponto adicionado.';
+  const positivesText = sanitizeText(insights.positives) || 'Nenhum ponto adicionado.';
   const positivesLines = pdf.splitTextToSize(positivesText, insightCardWidth - 10);
   pdf.text(positivesLines.slice(0, 4), insight2X + 6, yPos + 16);
 
@@ -401,7 +428,7 @@ function renderInsights(
   pdf.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  const focusText = insights.nextFocus || 'Nenhum foco adicionado.';
+  const focusText = sanitizeText(insights.nextFocus) || 'Nenhum foco adicionado.';
   const focusLines = pdf.splitTextToSize(focusText, insightCardWidth - 10);
   pdf.text(focusLines.slice(0, 4), insight3X + 6, yPos + 16);
 

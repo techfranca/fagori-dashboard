@@ -132,6 +132,12 @@ export default function DashboardPage() {
     setIsExporting(true);
     try {
       const pdfInsights = insights[activeCompany] || { progress: '', positives: '', nextFocus: '' };
+      
+      // Debug: verificar o que está sendo passado
+      console.log('Exportando PDF com insights:', pdfInsights);
+      console.log('Estado completo de insights:', insights);
+      console.log('Empresa ativa:', activeCompany);
+      
       generatePDF({
         currentData,
         activeCompany,
