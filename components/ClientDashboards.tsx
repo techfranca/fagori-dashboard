@@ -10,8 +10,8 @@ interface ClientDashboardProps {
   data: CompanyData;
 }
 
-// Dashboard Houston Academy
-export function HoustonDashboard({ data }: ClientDashboardProps) {
+// Dashboard Fagori Invest
+export function FagoriDashboard({ data }: ClientDashboardProps) {
   return (
     <>
       <InvestmentCard value={data.investment} />

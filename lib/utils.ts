@@ -11,22 +11,10 @@ export const formatNumber = (value: number): string => {
   return new Intl.NumberFormat('pt-BR').format(value);
 };
 
-// Verificar se email é admin
-export const isAdminEmail = (email: string | null | undefined): boolean => {
-  if (!email) return false;
-  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
-  return adminEmails.includes(email.toLowerCase());
-};
-
-// Verificar se email é autorizado
-export const isAuthorizedEmail = (email: string | null | undefined): boolean => {
-  if (!email) return false;
-  const authorizedEmails = process.env.NEXT_PUBLIC_AUTHORIZED_EMAILS?.split(',').map(e => e.trim().toLowerCase()) || [];
-  // Se não há lista de emails autorizados, permite todos
-  if (authorizedEmails.length === 0 || (authorizedEmails.length === 1 && authorizedEmails[0] === '')) {
-    return true;
-  }
-  return authorizedEmails.includes(email.toLowerCase());
+// Verificar senha do admin
+export const verifyAdminPassword = (password: string): boolean => {
+  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123';
+  return password === adminPassword;
 };
 
 // Cores da marca Franca
@@ -42,7 +30,7 @@ export const colors = {
 
 // Empresas disponíveis
 export const companies = [
-  { id: 'houston', name: 'Houston Academy' },
+  { id: 'fagori', name: 'Fagori Invest' },
   { id: 'trevo-barbearia', name: 'Trevo Barbearia' },
   { id: 'trevo-tabacaria', name: 'Trevo Tabacaria' },
   { id: 'miguel', name: 'Miguel' }
@@ -82,8 +70,8 @@ export interface DashboardData {
 
 // Dados de exemplo
 export const sampleData: DashboardData = {
-  houston: {
-    name: 'Houston Academy',
+  fagori: {
+    name: 'Fagori Invest',
     period: { start: '01/01/2025', end: '31/01/2025' },
     metrics: {
       purchases: { results: 47, costPerResult: 32.50 },

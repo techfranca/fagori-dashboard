@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Poppins, Montserrat } from 'next/font/google';
-import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
 
 const poppins = Poppins({ 
@@ -31,9 +30,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${poppins.variable} ${montserrat.variable} font-poppins`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        {children}
       </body>
     </html>
   );

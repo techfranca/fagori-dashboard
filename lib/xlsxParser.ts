@@ -65,8 +65,8 @@ export const parseXLSX = (file: File, activeCompany: string): Promise<CompanyDat
             periodEnd = formatDate(row['Término dos relatórios']);
           }
 
-          // HOUSTON ACADEMY
-          if (activeCompany === 'houston') {
+          // FAGORI INVEST
+          if (activeCompany === 'fagori') {
             if (resultType.includes('compras no site') || resultType.includes('compras')) {
               purchases.results += results;
               purchases.totalCost += investment;

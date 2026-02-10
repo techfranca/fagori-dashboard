@@ -83,7 +83,7 @@ export const generatePDF = ({ currentData, activeCompany, insights }: ExportPDFP
   const cardWidth = (PAGE.contentWidth - 10) / 3;
   const cardHeight = 55;
 
-  if (activeCompany === 'houston') {
+  if (activeCompany === 'fagori') {
     yPosition = renderHoustonMetrics(pdf, currentData, yPosition, cardWidth, cardHeight);
   } else if (activeCompany === 'miguel') {
     yPosition = renderMiguelMetrics(pdf, currentData, yPosition, cardHeight);
